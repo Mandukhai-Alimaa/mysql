@@ -12,24 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-from pathlib import Path
+sort-keys = []
 
-import adbc_drivers_validation.generate_documentation as generate_documentation
-
-from .mysql import MySQLQuirks
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-
-    template = Path(__file__).parent.parent.parent / "docs/mysql.md"
-    template = template.resolve()
-
-    generate_documentation.generate(
-        MySQLQuirks(),
-        Path("validation-report.xml").resolve(),
-        template,
-        args.output.resolve(),
-    )
+[tags]
+sql-type-name = "NUMERIC"

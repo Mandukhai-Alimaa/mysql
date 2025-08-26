@@ -12,24 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-from pathlib import Path
+ifeq ($(shell go env GOOS), linux)
+	RM=rm -f
+	PREFIX=lib
+	SUFFIX=so
+else ifeq ($(shell go env GOOS), darwin)
+	RM=rm -f
+	PREFIX=lib
+	SUFFIX=dylib
+else ifeq ($(shell go env GOOS), windows)
+	RM=del
+	PREFIX=
+	SUFFIX=dll
+else
+	$(error Unsupported OS)
+endif
 
-import adbc_drivers_validation.generate_documentation as generate_documentation
+DRIVERS := \
+	libadbc_driver_mysql.$(SUFFIX)
 
-from .mysql import MySQLQuirks
+.PHONY: all clean
+all: $(DRIVERS)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
+clean:
+	$(RM) $(DRIVERS)
 
-    template = Path(__file__).parent.parent.parent / "docs/mysql.md"
-    template = template.resolve()
-
-    generate_documentation.generate(
-        MySQLQuirks(),
-        Path("validation-report.xml").resolve(),
-        template,
-        args.output.resolve(),
-    )
+libadbc_driver_mysql.$(SUFFIX): $(wildcard *.go pkg/*.go pkg/*.c pkg/%.h) go.mod go.sum
+	go build -C ./pkg -o ../$@ -buildmode=c-shared -tags driverlib -ldflags "-s -w" .
+	-$(RM) ./$(basename $@).h
+	chmod 755 $@
