@@ -35,8 +35,8 @@ class MySQLQuirks(model.DriverQuirks):
         statement_bulk_ingest_temporary=False,
         statement_execute_schema=False,
         statement_get_parameter_schema=False,
-        current_catalog="dev",
-        current_schema="public",
+        current_catalog="db",  # MySQL treats databases as catalogs (also JDBC behavior)
+        current_schema="",  # getSchemas() returns empty - no schema concept (also JDBC behavior)
         supported_xdbc_fields=[],
     )
     setup = model.DriverSetup(
@@ -56,6 +56,10 @@ class MySQLQuirks(model.DriverQuirks):
 
     def is_table_not_found(self, table_name: str, error: Exception) -> bool:
         raise error
+
+    def quote_one_identifier(self, identifier: str) -> str:
+        identifier = identifier.replace("`", "``")
+        return f"`{identifier}`"
 
     def split_statement(self, statement: str) -> list[str]:
         return quirks.split_statement(statement)
