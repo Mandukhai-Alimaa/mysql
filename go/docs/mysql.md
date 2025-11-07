@@ -52,7 +52,7 @@ Components:
 Reserved characters in URI elements must be URI-encoded. For example, `@` becomes `%40`. If you include a zone ID in an IPv6 address, the `%` character used as the separator must be replaced with `%25`.
 :::
 
-**Socket Connections**: Use either percent encoding (`/path%2Fto%2Fsocket.sock`) or parentheses (`(/path/to/socket.sock)`).
+When connecting via Unix domain sockets, either URI-encode the path (`/path%2Fto%2Fsocket.sock`) or wrap the path in parentheses (`(/path/to/socket.sock)`).
 
 Examples:
 - mysql://localhost/mydb
