@@ -27,7 +27,7 @@ open-source relational database management system.
 
 The driver can be installed with `dbc`.
 
-To use the driver, provide a MySQL connection string as the `url` option. The driver supports both standard MySQL URIs and DSN-style connection strings but standard URIs are recommended.
+To use the driver, provide a MySQL connection string as the `url` option. The driver supports both standard MySQL URIs and DSN-style connection strings, but standard URIs are recommended.
 
 ## Connection String Format
 
