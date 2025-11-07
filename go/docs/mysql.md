@@ -27,33 +27,40 @@ open-source relational database management system.
 
 The driver can be installed with `dbc`.
 
-To use the driver, provide the MySQL connection URI as the `url` option.
+To use the driver, provide a MySQL connection string as the `url` option. The driver supports both standard MySQL URIs and DSN-style connection strings but standard URIs are recommended.
 
-## Connection URI Format
+## Connection String Format
 
-The MySQL ADBC driver supports `mysql://` URIs:
+MySQL's standard URI syntax:
 
 ```
-mysql://[username[:password]@]host[:port][/database][?param1=value1&param2=value2]
+mysql://[user[:[password]]@]host[:port][/schema][?attribute1=value1&attribute2=value2...]
 ```
+
+This follows MySQL's official URI-like connection string format [MySQL URI-Like Connection String](https://dev.mysql.com/doc/refman/8.4/en/connecting-using-uri-or-key-value-pairs.html#connecting-using-uri). Also see [MySQL Connection Parameters](https://dev.mysql.com/doc/refman/8.4/en/connecting-using-uri-or-key-value-pairs.html#connection-parameters-base) for the complete specification.
 
 Components:
 - Scheme: mysql:// (required)
-- Username: Optional (for authentication)
-- Password: Optional (for authentication, requires username)
-- Host: Required (no default)
+- User: Optional (for authentication)
+- Password: Optional (for authentication, requires user)
+- Host: Required (defaults to localhost, or socket path)
 - Port: Optional (defaults to 3306)
-- Database: Optional (can be empty)
-- Query params: All MySQL DSN parameters supported
+- Schema: Optional (can be empty, MySQL database name)
+- Query params: MySQL connection attributes
 
-See [MySQL Connection Parameters](https://dev.mysql.com/doc/refman/8.4/en/connecting-using-uri-or-key-value-pairs.html#connection-parameters-base) for complete parameter reference.
+**Important**: Percent encoding must be used for reserved characters in URI elements. For example, `@` becomes `%40`. If you include a zone ID in an IPv6 address, the `%` character used as the separator must be replaced with `%25`.
+
+**Socket Connections**: Use either percent encoding (`/path%2Fto%2Fsocket.sock`) or parentheses (`(/path/to/socket.sock)`).
 
 Examples:
 - mysql://localhost/mydb
 - mysql://user:pass@localhost:3306/mydb
 - mysql://user:pass@host/db?charset=utf8mb4&timeout=30s
-- mysql://user@unix(/tmp/mysql.sock)/db
-- mysql://user:pass@host/
+- mysql://user@/path%2Fto%2Fsocket.sock/db (socket with percent encoding)
+- mysql://user@(/path/to/socket.sock)/db (socket with parentheses)
+- mysql://user:@localhost/mydb (no password)
+
+The driver also supports traditional MySQL DSN format (see [Go MySQL Driver documentation](https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name)), but standard URIs are recommended.
 
 ## Feature & Type Support
 
