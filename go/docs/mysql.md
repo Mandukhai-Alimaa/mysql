@@ -37,7 +37,7 @@ MySQL's standard URI syntax:
 mysql://[user[:[password]]@]host[:port][/schema][?attribute1=value1&attribute2=value2...]
 ```
 
-This follows MySQL's official URI-like connection string format [MySQL URI-Like Connection String](https://dev.mysql.com/doc/refman/8.4/en/connecting-using-uri-or-key-value-pairs.html#connecting-using-uri). Also see [MySQL Connection Parameters](https://dev.mysql.com/doc/refman/8.4/en/connecting-using-uri-or-key-value-pairs.html#connection-parameters-base) for the complete specification.
+This follows MySQL's official [URI-like connection string format](https://dev.mysql.com/doc/refman/8.4/en/connecting-using-uri-or-key-value-pairs.html#connecting-using-uri). Also see [MySQL Connection Parameters](https://dev.mysql.com/doc/refman/8.4/en/connecting-using-uri-or-key-value-pairs.html#connection-parameters-base) for the complete specification.
 
 Components:
 - Scheme: mysql:// (required)
