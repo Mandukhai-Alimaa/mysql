@@ -59,7 +59,7 @@ Examples:
 - mysql://user:pass@localhost:3306/mydb
 - mysql://user:pass@host/db?charset=utf8mb4&timeout=30s
 - mysql://user@/path%2Fto%2Fsocket.sock/db (domain socket with percent encoding)
-- mysql://user@(/path/to/socket.sock)/db (socket with parentheses)
+- mysql://user@(/path/to/socket.sock)/db (domain socket with parentheses)
 - mysql://user@localhost/mydb (no password)
 
 The driver also supports traditional MySQL DSN format (see [Go MySQL Driver documentation](https://github.com/go-sql-driver/mysql?tab=readme-ov-file#dsn-data-source-name)), but standard URIs are recommended.
