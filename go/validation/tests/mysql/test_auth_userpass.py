@@ -1,8 +1,21 @@
-# Copyright (c) 2025 Columnar Technologies Inc.  All rights reserved.
+# Copyright (c) 2025 ADBC Drivers Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import urllib.parse
 
 import adbc_driver_manager.dbapi
 import pytest
-import urllib.parse
 from adbc_drivers_validation import model
 
 
@@ -44,11 +57,11 @@ def test_userpass_options(
     with adbc_driver_manager.dbapi.connect(
         driver=driver_path,
         db_kwargs=params,
-            ) as conn:
+    ) as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT 1")
-            
-            
+
+
 @pytest.mark.feature(group="Authentication", name="Invalid credentials in options fail")
 def test_userpass_options_override_uri(
     driver: model.DriverQuirks,
@@ -64,16 +77,14 @@ def test_userpass_options_override_uri(
         "username": "this_user_is_bad",
         "password": "this_password_is_bad",
     }
-    
+
     with pytest.raises(
         adbc_driver_manager.dbapi.OperationalError,
         match="Access denied for user 'this_user_is_bad'",
     ):
-        with adbc_driver_manager.dbapi.connect(
-            driver=driver_path, db_kwargs=params
-        ):
+        with adbc_driver_manager.dbapi.connect(driver=driver_path, db_kwargs=params):
             pass
-        
+
 
 @pytest.mark.feature(group="Security", name="SSL modes")
 @pytest.mark.parametrize(
@@ -88,7 +99,7 @@ def test_userpass_options_override_uri(
 def test_ssl_modes(
     driver: model.DriverQuirks,
     driver_path: str,
-    uri: str,   # mysql://localhost:3306/db
+    uri: str,  # mysql://localhost:3306/db
     creds: tuple[str, str],
     tls_param: str,
     expect_encrypted: bool,
@@ -100,10 +111,9 @@ def test_ssl_modes(
     netloc = f"{username}:{password}@{parsed.netloc}"
 
     query = f"{parsed.query}&{tls_param}" if parsed.query else tls_param
-    ssl_uri = urllib.parse.urlunparse((
-        parsed.scheme, netloc, parsed.path,
-        parsed.params, query, parsed.fragment
-    ))
+    ssl_uri = urllib.parse.urlunparse(
+        (parsed.scheme, netloc, parsed.path, parsed.params, query, parsed.fragment)
+    )
 
     with adbc_driver_manager.dbapi.connect(
         driver=driver_path,
@@ -113,13 +123,13 @@ def test_ssl_modes(
             cursor.execute("SHOW STATUS LIKE 'Ssl_cipher'")
             result = cursor.fetchone()
             assert result, "Could not get SSL status"
-            
+
             cipher = result[1]
             if expect_encrypted:
                 assert cipher, "Ssl_cipher is empty, connection is NOT encrypted"
             else:
                 assert not cipher, "Ssl_cipher is not empty, connection IS encrypted"
-                
+
 
 @pytest.mark.feature(group="Configuration", name="Default port")
 def test_uri_default_port(
@@ -133,7 +143,7 @@ def test_uri_default_port(
     username, password = creds
 
     no_port_uri = f"mysql://{username}:{password}@{mysql_host}/{mysql_database}"
-    
+
     with adbc_driver_manager.dbapi.connect(
         driver=driver_path,
         db_kwargs={"uri": no_port_uri},
@@ -176,10 +186,16 @@ def test_charset_selection_in_uri(
 
     parsed = urllib.parse.urlparse(uri)
     netloc = f"{username}:{password}@{parsed.netloc}"
-    charset_uri = urllib.parse.urlunparse((
-        parsed.scheme, netloc, parsed.path,
-        parsed.params, "charset=utf8mb4", parsed.fragment
-    ))
+    charset_uri = urllib.parse.urlunparse(
+        (
+            parsed.scheme,
+            netloc,
+            parsed.path,
+            parsed.params,
+            "charset=utf8mb4",
+            parsed.fragment,
+        )
+    )
 
     with adbc_driver_manager.dbapi.connect(
         driver=driver_path,
@@ -231,7 +247,7 @@ def test_unix_socket_parentheses(
     driver: model.DriverQuirks,
     driver_path: str,
     creds: tuple[str, str],
-    mysql_socket_path: str, # /tmp/mysql.sock
+    mysql_socket_path: str,  # /tmp/mysql.sock
 ) -> None:
     """Tests socket connection using mysql://user:pass@(/path/to/socket.sock)/db"""
     username, password = creds
@@ -252,15 +268,19 @@ def test_unix_socket_percent_encoding(
     driver: model.DriverQuirks,
     driver_path: str,
     creds: tuple[str, str],
-    mysql_socket_path: str, # /tmp/mysql.sock
+    mysql_socket_path: str,  # /tmp/mysql.sock
 ) -> None:
     """Tests socket connection using mysql://user:pass@/path%2Fto%2Fsocket.sock/db"""
     username, password = creds
 
     # Convert socket path to percent-encoded format
     # Remove leading slash and encode the path, then reconstruct
-    socket_path_no_slash = mysql_socket_path[1:] if mysql_socket_path.startswith('/') else mysql_socket_path
-    encoded_path = urllib.parse.quote(socket_path_no_slash, safe='')
+    socket_path_no_slash = (
+        mysql_socket_path[1:]
+        if mysql_socket_path.startswith("/")
+        else mysql_socket_path
+    )
+    encoded_path = urllib.parse.quote(socket_path_no_slash, safe="")
     socket_uri = f"mysql://{username}:{password}@/{encoded_path}/db"
 
     with adbc_driver_manager.dbapi.connect(
@@ -270,9 +290,10 @@ def test_unix_socket_percent_encoding(
         with conn.cursor() as cursor:
             cursor.execute("SELECT 1")
             assert cursor.fetchone()[0] == 1
-            
+
 
 # --- DSN tests ---
+
 
 @pytest.mark.feature(group="Authentication", name="Basic DSN connection")
 def test_basic_dsn_connection(
@@ -284,13 +305,13 @@ def test_basic_dsn_connection(
     with adbc_driver_manager.dbapi.connect(
         driver=driver_path,
         db_kwargs={"uri": dsn},
-            ) as conn:
+    ) as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT 1")
             result = cursor.fetchone()
             assert result[0] == 1
-            
-            
+
+
 @pytest.mark.feature(group="Configuration", name="Minimal DSN with credentials")
 def test_minimal_dsn_with_creds(
     driver: model.DriverQuirks,
@@ -302,9 +323,9 @@ def test_minimal_dsn_with_creds(
     This DSN implies a connection to the default 'tcp(localhost:3306)'.
     """
     username, password = creds
-    
+
     minimal_uri = f"{username}:{password}@/"
-    
+
     with adbc_driver_manager.dbapi.connect(
         driver=driver_path,
         db_kwargs={"uri": minimal_uri},
@@ -313,13 +334,15 @@ def test_minimal_dsn_with_creds(
             cursor.execute("SELECT 1")
             result = cursor.fetchone()
             assert result[0] == 1
-            
+
             cursor.execute("SELECT DATABASE()")
             result = cursor.fetchone()
             assert result[0] is None
 
 
-@pytest.mark.feature(group="Configuration", name="Plain hostname with credentials in options")
+@pytest.mark.feature(
+    group="Configuration", name="Plain hostname with credentials in options"
+)
 def test_plain_host_with_creds_options(
     driver: model.DriverQuirks,
     driver_path: str,
@@ -344,25 +367,23 @@ def test_plain_host_with_creds_options(
 def test_native_dsn_options_override(
     driver: model.DriverQuirks,
     driver_path: str,
-    dsn: str, # Example: my:password@tcp(localhost:3306)/db
+    dsn: str,  # Example: my:password@tcp(localhost:3306)/db
 ) -> None:
     """
     Tests that 'username' and 'password' options
     override credentials in a NATIVE DSN (not a URI).
     """
     params = {
-        "uri": dsn, # Has valid credentials
+        "uri": dsn,  # Has valid credentials
         "username": "this_user_is_bad",
         "password": "this_password_is_bad",
     }
-    
+
     with pytest.raises(
         adbc_driver_manager.dbapi.OperationalError,
         match="Access denied for user 'this_user_is_bad'",
     ):
-        with adbc_driver_manager.dbapi.connect(
-            driver=driver_path, db_kwargs=params
-        ):
+        with adbc_driver_manager.dbapi.connect(driver=driver_path, db_kwargs=params):
             pass
 
 
