@@ -49,11 +49,6 @@ func (f *MySQLDBFactory) CreateDB(ctx context.Context, driverName string, opts m
 	return sql.Open(driverName, dsn)
 }
 
-// BuildDSN exposes the MySQL DSN building functionality for testing purposes.
-func (f *MySQLDBFactory) BuildDSN(opts map[string]string) (string, error) {
-	return f.buildMySQLDSN(opts)
-}
-
 // buildMySQLDSN constructs a MySQL DSN from the provided options.
 // Handles the following scenarios:
 //  1. MySQL URI: "mysql://user:pass@host:port/schema?params" → converted to DSN
@@ -74,7 +69,6 @@ func (f *MySQLDBFactory) buildMySQLDSN(opts map[string]string) (string, error) {
 		return f.parseToMySQLDSN(baseURI, username, password)
 	}
 
-	// Handle traditional MySQL DSN format
 	if username == "" && password == "" {
 		return baseURI, nil
 	}
