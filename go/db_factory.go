@@ -17,6 +17,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"net/url"
 	"strings"
 
 	"github.com/adbc-drivers/driverbase-go/driverbase"
@@ -48,17 +49,16 @@ func (f *MySQLDBFactory) CreateDB(ctx context.Context, driverName string, opts m
 	return sql.Open(driverName, dsn)
 }
 
+// BuildDSN exposes the MySQL DSN building functionality for testing purposes.
+func (f *MySQLDBFactory) BuildDSN(opts map[string]string) (string, error) {
+	return f.buildMySQLDSN(opts)
+}
+
 // buildMySQLDSN constructs a MySQL DSN from the provided options.
 // Handles the following scenarios:
-//  1. Full DSN, no separate credentials:
-//     Example: "user:pass@tcp(host:port)/db"
-//     → Returned as-is.
-//  2. Plain host + credentials:
-//     Example: baseURI="localhost:3306", username="root", password="secret"
-//     → Produces "root:secret@tcp(localhost:3306)/".
-//  3. Full DSN + override credentials:
-//     Example: baseURI="old:old@tcp(host:3306)/db", username="new", password="newpass"
-//     → Credentials are replaced.
+//  1. MySQL URI: "mysql://user:pass@host:port/schema?params" → converted to DSN
+//  2. Full DSN: "user:pass@tcp(host:port)/db" → returned as-is or credentials updated
+//  3. Plain host + credentials: "localhost:3306" + username/password → converted to DSN
 func (f *MySQLDBFactory) buildMySQLDSN(opts map[string]string) (string, error) {
 	baseURI := opts[adbc.OptionKeyURI]
 	username := opts[adbc.OptionKeyUsername]
@@ -69,13 +69,108 @@ func (f *MySQLDBFactory) buildMySQLDSN(opts map[string]string) (string, error) {
 		return "", f.errorHelper.InvalidArgument("missing required option %s", adbc.OptionKeyURI)
 	}
 
-	// If no credentials provided, return original URI
+	// Check if this is a MySQL URI (mysql://)
+	if strings.HasPrefix(baseURI, "mysql://") {
+		return f.parseToMySQLDSN(baseURI, username, password)
+	}
+
+	// Handle traditional MySQL DSN format
 	if username == "" && password == "" {
 		return baseURI, nil
 	}
-
-	// Handle native MySQL DSN formats
 	return f.buildFromNativeDSN(baseURI, username, password)
+}
+
+// parseToMySQLDSN converts a MySQL URI to MySQL DSN format.
+// Examples:
+//   mysql://root@localhost:3306/demo → root@tcp(localhost:3306)/demo
+//   mysql://user:pass@host/db?charset=utf8mb4 → user:pass@tcp(host:3306)/db?charset=utf8mb4
+//   mysql://user@(/path/to/socket.sock)/db → user@unix(/path/to/socket.sock)/db
+func (f *MySQLDBFactory) parseToMySQLDSN(mysqlURI, username, password string) (string, error) {
+    u, err := url.Parse(mysqlURI)
+    if err != nil {
+        return "", f.errorHelper.InvalidArgument("invalid MySQL URI format: %v", err)
+    }
+
+    cfg := mysql.NewConfig()
+
+    if u.User != nil {
+        cfg.User = u.User.Username()
+        if pass, hasPass := u.User.Password(); hasPass {
+            cfg.Passwd = pass
+        }
+    }
+
+    if username != "" {
+        cfg.User = username
+    }
+    if password != "" {
+        cfg.Passwd = password
+    }
+
+	var dbPath string
+
+	// MySQL socket URIs have non-standard hostname patterns that require special handling after parsing.
+    switch u.Hostname() {
+	case "(":
+		// Case 1: Socket with parentheses: mysql://user@(/path/to/socket.sock)/db
+		cfg.Net = "unix"
+
+		closeParenIndex := strings.Index(u.Path, ")")
+		if closeParenIndex == -1 {
+			return "", f.errorHelper.InvalidArgument("invalid MySQL URI: missing closing ')' for socket path in %s", u.Path)
+		}
+		
+		cfg.Addr = u.Path[:closeParenIndex]
+		dbPath = u.Path[closeParenIndex+1:]
+
+	case "":
+		// Case 2: Empty host, could be socket or default TCP connection
+		// e.g., mysql://user@/tmp/mysql.sock/testdb (socket)
+		// e.g., mysql://user@/db (default TCP connection)
+		if sockIndex := strings.Index(u.Path, ".sock/"); sockIndex != -1 {
+			// Socket with a database path: /path/to/socket.sock/db
+			socketEnd := sockIndex + 5 // .sock
+			cfg.Net = "unix"
+			cfg.Addr = u.Path[:socketEnd]
+			dbPath = u.Path[socketEnd:]
+		} else if strings.HasSuffix(u.Path, ".sock") {
+			// Socket with no database path: /path/to/socket.sock
+			cfg.Net = "unix"
+			cfg.Addr = u.Path
+			dbPath = ""
+		} else {
+			// Fallback: Not a socket, treat as TCP to default host
+			cfg.Net = "tcp"
+			cfg.Addr = "localhost:3306"
+			dbPath = u.Path
+		}
+
+	default:
+		// Case 3: Regular TCP connection with a hostname
+		cfg.Net = "tcp"
+		if u.Port() != "" {
+			cfg.Addr = u.Host
+		} else {
+			cfg.Addr = u.Hostname() + ":3306"
+		}
+		dbPath = u.Path
+	}
+
+    // Extract database/schema from path
+    if dbPath != "" && dbPath != "/" {
+        // u.Path is already URL-decoded by url.Parse()
+        // We just need to trim the leading slash.
+        // cfg.FormatDSN() will correctly re-encode this if needed.
+        cfg.DBName = strings.TrimPrefix(dbPath, "/")
+    }
+
+    dsn := cfg.FormatDSN()
+    if u.RawQuery != "" {
+        dsn += "?" + u.RawQuery
+    }
+
+    return dsn, nil
 }
 
 // buildFromNativeDSN handles MySQL's native DSN format and plain host strings.
