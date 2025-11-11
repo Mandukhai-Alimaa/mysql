@@ -707,9 +707,10 @@ func TestURIParsing(t *testing.T) {
 			expectedDSN: "user:pass@tcp(localhost:3306)/testdb",
 		},
 		{
-			name:        "tcp without host - should default to localhost:3306",
-			mysqlURI:    "mysql://user:pass@/testdb",
-			expectedDSN: "user:pass@tcp(localhost:3306)/testdb",
+			name:          "tcp without host - should be invalid",
+			mysqlURI:      "mysql://user:pass@/testdb",
+			shouldError:   true,
+			errorContains: "missing hostname in URI",
 		},
 		{
 			name:        "tcp without database",
@@ -814,9 +815,10 @@ func TestURIParsing(t *testing.T) {
 			expectedDSN: "user:pass@unix(/tmp/mysql.sock)/testdb",
 		},
 		{
-			name:        "unix socket with percent encoding",
-			mysqlURI:    "mysql://user:pass@/tmp%2Fmysql.sock/testdb",
-			expectedDSN: "user:pass@unix(/tmp/mysql.sock)/testdb",
+			name:          "unix socket with percent encoding - should be invalid. Must use parenthesis",
+			mysqlURI:      "mysql://user:pass@/tmp%2Fmysql.sock/testdb",
+			shouldError:   true,
+			errorContains: "missing hostname in URI",
 		},
 		{
 			name:        "unix socket with complex path",
@@ -834,14 +836,10 @@ func TestURIParsing(t *testing.T) {
 			expectedDSN: "user:pass@unix(/tmp/mysql.sock)/testdb?charset=utf8mb4",
 		},
 		{
-			name:        "unix socket with empty host (ambiguous)",
-			mysqlURI:    "mysql://user:pass@/tmp/mysql.sock/testdb",
-			expectedDSN: "user:pass@unix(/tmp/mysql.sock)/testdb",
-		},
-		{
-			name:        "unix socket with empty host and no db",
-			mysqlURI:    "mysql://user:pass@/tmp/mysql.sock",
-			expectedDSN: "user:pass@unix(/tmp/mysql.sock)/",
+			name:          "unix socket with empty host (ambiguous) - should be invalid",
+			mysqlURI:      "mysql://user:pass@/tmp/mysql.sock/testdb",
+			shouldError:   true,
+			errorContains: "missing hostname in URI",
 		},
 		{
 			name:          "invalid unix socket (missing parenthesis)",
@@ -854,22 +852,11 @@ func TestURIParsing(t *testing.T) {
 			mysqlURI:    "mysql://user:pass@(/tmp/mysql.sock)/my%20db?foo=bar",
 			expectedDSN: "user:pass@unix(/tmp/mysql.sock)/my%20db?foo=bar",
 		},
-		{
-			name:        "unix socket (empty host) with encoded db name",
-			mysqlURI:    "mysql://user:pass@/tmp/mysql.sock/my%20db?foo=bar",
-			expectedDSN: "user:pass@unix(/tmp/mysql.sock)/my%20db?foo=bar",
-		},
-
 		// Special characters and edge cases
 		{
 			name:        "credentials with special characters",
 			mysqlURI:    "mysql://my%40user:p%40ss%24word@localhost:3306/testdb",
 			expectedDSN: "my@user:p@ss$word@tcp(localhost:3306)/testdb",
-		},
-		{
-			name:        "minimal uri with credentials",
-			mysqlURI:    "mysql://user:pass@/",
-			expectedDSN: "user:pass@tcp(localhost:3306)/",
 		},
 
 		// Error cases

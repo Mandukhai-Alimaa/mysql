@@ -120,26 +120,9 @@ func (f *MySQLDBFactory) parseToMySQLDSN(mysqlURI, username, password string) (s
 		dbPath = u.Path[closeParenIndex+1:]
 
 	case "":
-		// Case 2: Empty host, could be socket or default TCP connection
-		// e.g., mysql://user@/tmp/mysql.sock/testdb (socket)
-		// e.g., mysql://user@/db (default TCP connection)
-		if sockIndex := strings.Index(u.Path, ".sock/"); sockIndex != -1 {
-			// Socket with a database path: /path/to/socket.sock/db
-			socketEnd := sockIndex + 5 // .sock
-			cfg.Net = "unix"
-			cfg.Addr = u.Path[:socketEnd]
-			dbPath = u.Path[socketEnd:]
-		} else if strings.HasSuffix(u.Path, ".sock") {
-			// Socket with no database path: /path/to/socket.sock
-			cfg.Net = "unix"
-			cfg.Addr = u.Path
-			dbPath = ""
-		} else {
-			// Fallback: Not a socket, treat as TCP to default host
-			cfg.Net = "tcp"
-			cfg.Addr = "localhost:3306"
-			dbPath = u.Path
-		}
+		// Case 2: Empty host is invalid - hostname must be explicit
+		// Use parentheses syntax for sockets: mysql://user@(/path/to/socket)/db
+		return "", f.errorHelper.InvalidArgument("missing hostname in URI: %s. Use explicit hostname or socket syntax: mysql://user@(socketpath)/db", mysqlURI)
 
 	default:
 		// Case 3: Regular TCP connection with a hostname
