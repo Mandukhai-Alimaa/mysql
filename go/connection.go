@@ -64,7 +64,7 @@ func (c *mysqlConnectionImpl) PrepareDriverInfo(ctx context.Context, infoCodes [
 	if c.version == "" {
 		var version, comment string
 		if err := c.Conn.QueryRowContext(ctx, "SELECT @@version, @@version_comment").Scan(&version, &comment); err != nil {
-			return c.ErrorHelper.Errorf(adbc.StatusInternal, "failed to get version: %v", err)
+			return c.Base().ErrorHelper.WrapIO(err, "failed to get version")
 		}
 		c.version = fmt.Sprintf("%s (%s)", version, comment)
 	}
