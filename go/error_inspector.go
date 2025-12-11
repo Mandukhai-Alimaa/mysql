@@ -16,8 +16,6 @@ package mysql
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/apache/arrow-adbc/go/adbc"
 	"github.com/go-sql-driver/mysql"
@@ -29,14 +27,9 @@ type MySQLErrorInspector struct{}
 // mysql error codes: https://www.fromdual.com/mysql-error-codes-and-messages
 func (m MySQLErrorInspector) InspectError(err error, defaultStatus adbc.Status) adbc.Error {
 	status := defaultStatus
-	var vendorCode int32
-	var sqlState [5]byte
 
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) {
-		vendorCode = int32(mysqlErr.Number)
-		copy(sqlState[:], mysqlErr.SQLState[:])
-
 		switch mysqlErr.Number {
 		case 1045: // ER_ACCESS_DENIED_ERROR
 			status = adbc.StatusUnauthenticated
@@ -83,8 +76,8 @@ func (m MySQLErrorInspector) InspectError(err error, defaultStatus adbc.Status) 
 		}
 
 		// If status still not determined, use SQLSTATE prefix as fallback.
-		if sqlState[0] != 0 && status == defaultStatus {
-			switch string(sqlState[:2]) {
+		if mysqlErr.SQLState[0] != 0 && status == defaultStatus {
+			switch string(mysqlErr.SQLState[:2]) {
 			case "02": // No data
 				status = adbc.StatusNotFound
 			case "07": // Dynamic SQL/Connection errors
@@ -111,18 +104,8 @@ func (m MySQLErrorInspector) InspectError(err error, defaultStatus adbc.Status) 
 		}
 	}
 
-	// Strip "Error 1292 (22007): " prefix - vendor code and SQLSTATE are in structured fields
-	// and printed separately after the message
-	msg := err.Error()
-	if mysqlErr != nil {
-		prefix := fmt.Sprintf("Error %d (%s): ", mysqlErr.Number, string(mysqlErr.SQLState[:]))
-		msg = strings.TrimPrefix(msg, prefix)
-	}
-
 	return adbc.Error{
-		Code:       status,
-		Msg:        msg,
-		VendorCode: vendorCode,
-		SqlState:   sqlState,
+		Code: status,
+		Msg:  err.Error(),
 	}
 }
