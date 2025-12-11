@@ -40,7 +40,7 @@ func (c *mysqlConnectionImpl) GetCatalogs(ctx context.Context, catalogFilter *st
 
 	rows, err := c.Db.QueryContext(ctx, queryBuilder.String(), args...)
 	if err != nil {
-		return nil, c.Base().ErrorHelper.WrapIO(err, "failed to query catalogs")
+		return nil, c.ErrorHelper.WrapIO(err, "failed to query catalogs")
 	}
 	defer func() {
 		err = errors.Join(err, rows.Close())
@@ -50,13 +50,13 @@ func (c *mysqlConnectionImpl) GetCatalogs(ctx context.Context, catalogFilter *st
 	for rows.Next() {
 		var catalog string
 		if err := rows.Scan(&catalog); err != nil {
-			return nil, c.Base().ErrorHelper.WrapIO(err, "failed to scan catalog")
+			return nil, c.ErrorHelper.WrapIO(err, "failed to scan catalog")
 		}
 		catalogs = append(catalogs, catalog)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, c.Base().ErrorHelper.WrapIO(err, "error during catalog iteration")
+		return nil, c.ErrorHelper.WrapIO(err, "error during catalog iteration")
 	}
 
 	return catalogs, err
@@ -71,7 +71,7 @@ func (c *mysqlConnectionImpl) GetDBSchemasForCatalog(ctx context.Context, catalo
 	if schemaFilter != nil {
 		matches, err := filepath.Match(*schemaFilter, "")
 		if err != nil {
-			return nil, c.Base().ErrorHelper.WrapInvalidArgument(err, "invalid schema filter pattern")
+			return nil, c.ErrorHelper.WrapInvalidArgument(err, "invalid schema filter pattern")
 		}
 		if !matches {
 			return []string{}, nil // Schema filter doesn't match empty string
@@ -116,7 +116,7 @@ func (c *mysqlConnectionImpl) getTablesOnly(ctx context.Context, catalog string,
 
 	rows, err := c.Db.QueryContext(ctx, queryBuilder.String(), args...)
 	if err != nil {
-		return nil, c.Base().ErrorHelper.WrapIO(err, "failed to query tables for catalog %s", catalog)
+		return nil, c.ErrorHelper.WrapIO(err, "failed to query tables for catalog %s", catalog)
 	}
 	defer func() {
 		err = errors.Join(err, rows.Close())
@@ -126,7 +126,7 @@ func (c *mysqlConnectionImpl) getTablesOnly(ctx context.Context, catalog string,
 	for rows.Next() {
 		var tableName, tableType string
 		if err := rows.Scan(&tableName, &tableType); err != nil {
-			return nil, c.Base().ErrorHelper.WrapIO(err, "failed to scan table info")
+			return nil, c.ErrorHelper.WrapIO(err, "failed to scan table info")
 		}
 
 		tables = append(tables, driverbase.TableInfo{
@@ -136,7 +136,7 @@ func (c *mysqlConnectionImpl) getTablesOnly(ctx context.Context, catalog string,
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, c.Base().ErrorHelper.WrapIO(err, "error during table iteration")
+		return nil, c.ErrorHelper.WrapIO(err, "error during table iteration")
 	}
 
 	return tables, err
@@ -193,7 +193,7 @@ func (c *mysqlConnectionImpl) getTablesWithColumns(ctx context.Context, catalog 
 
 	rows, err := c.Db.QueryContext(ctx, queryBuilder.String(), args...)
 	if err != nil {
-		return nil, c.Base().ErrorHelper.WrapIO(err, "failed to query tables with columns for catalog %s", catalog)
+		return nil, c.ErrorHelper.WrapIO(err, "failed to query tables with columns for catalog %s", catalog)
 	}
 	defer func() {
 		err = errors.Join(err, rows.Close())
@@ -210,7 +210,7 @@ func (c *mysqlConnectionImpl) getTablesWithColumns(ctx context.Context, catalog 
 			&tc.OrdinalPosition, &tc.ColumnName, &tc.ColumnComment,
 			&tc.DataType, &tc.IsNullable, &tc.ColumnDefault,
 		); err != nil {
-			return nil, c.Base().ErrorHelper.WrapIO(err, "failed to scan table with columns")
+			return nil, c.ErrorHelper.WrapIO(err, "failed to scan table with columns")
 		}
 
 		// Check if we need to create a new table entry
@@ -275,7 +275,7 @@ func (c *mysqlConnectionImpl) getTablesWithColumns(ctx context.Context, catalog 
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, c.Base().ErrorHelper.WrapIO(err, "error during table with columns iteration")
+		return nil, c.ErrorHelper.WrapIO(err, "error during table with columns iteration")
 	}
 
 	// TODO: Add constraint and foreign key metadata support

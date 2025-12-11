@@ -16,97 +16,113 @@ package mysql
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
-	"github.com/adbc-drivers/driverbase-go/driverbase"
 	"github.com/apache/arrow-adbc/go/adbc"
 	"github.com/go-sql-driver/mysql"
 )
 
 type MySQLErrorInspector struct{}
 
-// InspectError examines a MySQL error and extracts metadata
+// InspectError examines a MySQL error and formats it as an ADBC error
 // mysql error codes: https://www.fromdual.com/mysql-error-codes-and-messages
-func (m MySQLErrorInspector) InspectError(err error, defaultStatus adbc.Status) driverbase.ErrorInfo {
-	info := driverbase.ErrorInfo{Status: defaultStatus}
+func (m MySQLErrorInspector) InspectError(err error, defaultStatus adbc.Status) adbc.Error {
+	status := defaultStatus
+	var vendorCode int32
+	var sqlState [5]byte
 
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) {
-		info.VendorCode = int32(mysqlErr.Number)
-		info.SqlState = string(mysqlErr.SQLState[:])
+		vendorCode = int32(mysqlErr.Number)
+		copy(sqlState[:], mysqlErr.SQLState[:])
 
 		switch mysqlErr.Number {
 		case 1045: // ER_ACCESS_DENIED_ERROR
-			info.Status = adbc.StatusUnauthenticated
+			status = adbc.StatusUnauthenticated
 		case 1044, 1142, 1143, 1227: // Permission errors
-			info.Status = adbc.StatusUnauthorized
+			status = adbc.StatusUnauthorized
 		case 1146: // ER_NO_SUCH_TABLE
-			info.Status = adbc.StatusNotFound
+			status = adbc.StatusNotFound
 		case 1049: // ER_BAD_DB_ERROR
-			info.Status = adbc.StatusNotFound
+			status = adbc.StatusNotFound
 		case 1050: // ER_TABLE_EXISTS_ERROR
-			info.Status = adbc.StatusAlreadyExists
+			status = adbc.StatusAlreadyExists
 		case 1007: // ER_DB_CREATE_EXISTS
-			info.Status = adbc.StatusAlreadyExists
+			status = adbc.StatusAlreadyExists
 		case 1062: // ER_DUP_ENTRY
-			info.Status = adbc.StatusIntegrity
+			status = adbc.StatusIntegrity
 		case 1451: // ER_ROW_IS_REFERENCED_2 (foreign key constraint)
-			info.Status = adbc.StatusIntegrity
+			status = adbc.StatusIntegrity
 		case 1452: // ER_NO_REFERENCED_ROW_2 (foreign key constraint)
-			info.Status = adbc.StatusIntegrity
+			status = adbc.StatusIntegrity
 		case 1048: // ER_BAD_NULL_ERROR
-			info.Status = adbc.StatusIntegrity
+			status = adbc.StatusIntegrity
 		case 1364: // ER_NO_DEFAULT_FOR_FIELD
-			info.Status = adbc.StatusIntegrity
+			status = adbc.StatusIntegrity
 		case 1064: // ER_PARSE_ERROR
-			info.Status = adbc.StatusInvalidArgument
+			status = adbc.StatusInvalidArgument
 		case 1054: // ER_BAD_FIELD_ERROR
-			info.Status = adbc.StatusInvalidArgument
+			status = adbc.StatusInvalidArgument
 		case 1052: // ER_NON_UNIQ_ERROR
-			info.Status = adbc.StatusInvalidArgument
+			status = adbc.StatusInvalidArgument
 		case 1366: // ER_TRUNCATED_WRONG_VALUE_FOR_FIELD
-			info.Status = adbc.StatusInvalidData
+			status = adbc.StatusInvalidData
 		case 1292: // ER_TRUNCATED_WRONG_VALUE
-			info.Status = adbc.StatusInvalidData
+			status = adbc.StatusInvalidData
 		case 1264: // ER_WARN_DATA_OUT_OF_RANGE
-			info.Status = adbc.StatusInvalidData
+			status = adbc.StatusInvalidData
 		case 1205: // ER_LOCK_WAIT_TIMEOUT
-			info.Status = adbc.StatusTimeout
+			status = adbc.StatusTimeout
 		case 1213: // ER_LOCK_DEADLOCK
-			info.Status = adbc.StatusCancelled
+			status = adbc.StatusCancelled
 		case 2002, 2003, 2006, 2013: // Various connection errors
-			info.Status = adbc.StatusIO
+			status = adbc.StatusIO
 		case 1105: // ER_UNKNOWN_ERROR
-			info.Status = adbc.StatusInternal
+			status = adbc.StatusInternal
 		}
 
 		// If status still not determined, use SQLSTATE prefix as fallback.
-		if len(info.SqlState) >= 2 && info.Status == defaultStatus {
-			switch info.SqlState[:2] {
+		if sqlState[0] != 0 && status == defaultStatus {
+			switch string(sqlState[:2]) {
 			case "02": // No data
-				info.Status = adbc.StatusNotFound
+				status = adbc.StatusNotFound
 			case "07": // Dynamic SQL/Connection errors
-				info.Status = adbc.StatusIO
+				status = adbc.StatusIO
 			case "08": // Connection exception
-				info.Status = adbc.StatusIO
+				status = adbc.StatusIO
 			case "21", "22": // Cardinality/Data exception
-				info.Status = adbc.StatusInvalidData
+				status = adbc.StatusInvalidData
 			case "23": // Integrity constraint violation
-				info.Status = adbc.StatusIntegrity
+				status = adbc.StatusIntegrity
 			case "28": // Invalid authorization
-				info.Status = adbc.StatusUnauthenticated
+				status = adbc.StatusUnauthenticated
 			case "34": // Invalid cursor name
-				info.Status = adbc.StatusInvalidArgument
+				status = adbc.StatusInvalidArgument
 			case "42": // Syntax error or access rule violation
-				info.Status = adbc.StatusInvalidArgument
+				status = adbc.StatusInvalidArgument
 			case "44": // WITH CHECK OPTION violation
-				info.Status = adbc.StatusIntegrity
+				status = adbc.StatusIntegrity
 			case "55", "57": // Object not in prerequisite state / Operator intervention
-				info.Status = adbc.StatusInvalidState
+				status = adbc.StatusInvalidState
 			case "58": // System error
-				info.Status = adbc.StatusInternal
+				status = adbc.StatusInternal
 			}
 		}
 	}
 
-	return info
+	// Strip "Error 1292 (22007): " prefix - vendor code and SQLSTATE are in structured fields
+	// and printed separately after the message
+	msg := err.Error()
+	if mysqlErr != nil {
+		prefix := fmt.Sprintf("Error %d (%s): ", mysqlErr.Number, string(mysqlErr.SQLState[:]))
+		msg = strings.TrimPrefix(msg, prefix)
+	}
+
+	return adbc.Error{
+		Code:       status,
+		Msg:        msg,
+		VendorCode: vendorCode,
+		SqlState:   sqlState,
+	}
 }
