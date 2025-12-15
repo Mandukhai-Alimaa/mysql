@@ -29,8 +29,7 @@ import (
 
 // MySQLDBFactory provides MySQL-specific database connection creation.
 // It uses the go-sql-driver/mysql Config struct for proper DSN formatting.
-type MySQLDBFactory struct {
-}
+type MySQLDBFactory struct{}
 
 // NewMySQLDBFactory creates a new MySQLDBFactory.
 func NewMySQLDBFactory() *MySQLDBFactory {
