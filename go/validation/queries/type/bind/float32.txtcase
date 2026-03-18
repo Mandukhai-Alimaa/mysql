@@ -14,16 +14,15 @@
 
 // part: setup_query
 
-CREATE TABLE test_float16 (
-    idx INT,
+CREATE TABLE test_float32 (
     res FLOAT
 );
 
 // part: expected
 
 {"res": null}
+{"res": -3.40282e+38}
+{"res": -2.5}
 {"res": 0.0}
-{"res": -6.103519990574569e-05}
-{"res": -6.103519990574569e-05}
-{"res": 65504}
-{"res": -65504}
+{"res": 3.14159}
+{"res": 3.40282e+38}

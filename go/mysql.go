@@ -251,6 +251,9 @@ func (m *mySQLTypeConverter) ConvertArrowToGo(arrowArray arrow.Array, index int,
 
 		return m.DefaultTypeConverter.ConvertArrowToGo(arrowArray, index, field)
 
+	case *array.Float16:
+		return a.Value(index).Float32(), nil
+
 	default:
 		// For all other types, use default conversion
 		return m.DefaultTypeConverter.ConvertArrowToGo(arrowArray, index, field)
