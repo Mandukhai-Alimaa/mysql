@@ -100,8 +100,6 @@ Examples:
 - `user@tcp(127.0.0.1:3306)/mydb`
 - `user:pass@unix(/tmp/mysql.sock)/mydb`
 
-This format is used internally by the driver and may be convenient if you're already familiar with the Go MySQL driver. However, the MySQL URI format is recommended for better alignment with MySQL's official documentation and tooling.
-
 ## Feature & Type Support
 
 {{ features|safe }}
