@@ -1,0 +1,1 @@
+SELECT 131072 AS res
