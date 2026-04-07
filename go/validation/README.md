@@ -21,10 +21,12 @@
    ```shell
    docker compose up --detach --wait
    ```
-2. Set the environment variable:
+2. Set the environment variable (supports both DSN and MySQL URI formats):
 
    ```shell
    export MYSQL_DSN="my:password@tcp(localhost:3306)/db"
+   # OR
+   export MYSQL_DSN="mysql://my:password@localhost:3306/db"
    ```
 3. Run the tests:
 
