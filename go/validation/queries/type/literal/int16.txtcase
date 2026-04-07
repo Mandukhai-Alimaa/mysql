@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// part: metadata
+
+[tags]
+sql-type-name = "SMALLINT"
+
 // part: query
 
 SELECT 16384 AS res
