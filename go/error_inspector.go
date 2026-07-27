@@ -16,6 +16,7 @@ package mysql
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/apache/arrow-adbc/go/adbc"
 	"github.com/go-sql-driver/mysql"
@@ -101,6 +102,11 @@ func (m MySQLErrorInspector) InspectError(err error, defaultStatus adbc.Status) 
 			case "58": // System error
 				status = adbc.StatusInternal
 			}
+		}
+
+		message := strings.ToLower(mysqlErr.Message)
+		if strings.Contains(message, "not supported") || strings.Contains(message, "not support") {
+			status = adbc.StatusNotImplemented
 		}
 	}
 

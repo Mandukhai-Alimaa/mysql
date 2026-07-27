@@ -14,7 +14,7 @@
 
 // part: metadata
 
-skip = "Databend is not exposing TIMESTAMP_TZ faithfully over MySQL wire"
+skip = "Databend sends TIMESTAMP_TZ over MySQL wire as plain DATETIME text with a timezone offset like 2023-05-15 13:45:30.000000 +0000, but MySQL DATETIME semantics are wall-clock only and do not carry timezone information"
 
 [tags]
 sql-type-name = "TIMESTAMP_TZ"

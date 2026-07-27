@@ -129,8 +129,7 @@ class DatabendQuirks(MySQLQuirks):
         statement_bulk_ingest_temporary=False,
         statement_execute_schema=False,
         statement_prepare=False,
-        statement_rows_affected=False,
-        statement_rows_affected_ddl=False,
+        statement_rows_affected_dml_returns_zero=True,
         current_catalog="default",
     )
 
