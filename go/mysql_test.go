@@ -245,7 +245,7 @@ func (q *MySQLQuirks) SupportsGetSetOptions() bool                 { return true
 func (q *MySQLQuirks) SupportsGetTableSchema() bool                { return true }
 func (q *MySQLQuirks) SupportsPartitionedData() bool               { return false }
 func (q *MySQLQuirks) SupportsStatistics() bool                    { return false }
-func (q *MySQLQuirks) SupportsTransactions() bool                  { return false }
+func (q *MySQLQuirks) SupportsTransactions() bool                  { return true }
 func (q *MySQLQuirks) SupportsGetParameterSchema() bool            { return false }
 func (q *MySQLQuirks) SupportsDynamicParameterBinding() bool       { return true }
 func (q *MySQLQuirks) SupportsErrorIngestIncompatibleSchema() bool { return true }
