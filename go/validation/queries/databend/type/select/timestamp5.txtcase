@@ -47,4 +47,3 @@ INSERT INTO test_timestamp (idx, res) VALUES (5, NULL);
 {"res": -14182940}
 {"res": 253402127999}
 {"res": null}
-
