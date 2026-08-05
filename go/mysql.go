@@ -161,28 +161,32 @@ func (m *mySQLTypeConverter) ConvertRawColumnType(colType sqlwrapper.ColumnType)
 		metadata := arrow.MetadataFrom(metadataMap)
 		return arrow.BinaryTypes.String, nullable, metadata, nil
 
-	case "TIMESTAMP":
-		var timestampType arrow.DataType
+	case "DATETIME", "TIMESTAMP":
 		metadataMap := map[string]string{
 			sqlwrapper.MetaKeyDatabaseTypeName: colType.DatabaseTypeName,
 			sqlwrapper.MetaKeyColumnName:       colType.Name,
 		}
 
+		timestampType := &arrow.TimestampType{Unit: arrow.Microsecond}
 		if colType.Precision != nil {
 			precision := *colType.Precision
 			metadataMap[sqlwrapper.MetaKeyFractionalSecondsPrecision] = fmt.Sprintf("%d", precision)
-			if precision > 6 {
-				precision = 6
+			switch {
+			case precision == 0:
+				timestampType.Unit = arrow.Second
+			case precision >= 1 && precision <= 3:
+				timestampType.Unit = arrow.Millisecond
+			case precision >= 4 && precision <= 6:
+				timestampType.Unit = arrow.Microsecond
 			}
-			timeUnit := arrow.TimeUnit(precision / 3)
-			timestampType = &arrow.TimestampType{Unit: timeUnit, TimeZone: "UTC"}
-		} else {
-			// No precision info available, default to microseconds (most common)
-			timestampType = &arrow.TimestampType{Unit: arrow.Microsecond, TimeZone: "UTC"}
+		}
+
+		if typeName == "TIMESTAMP" {
+			timestampType.TimeZone = "UTC"
 		}
 
 		metadata := arrow.MetadataFrom(metadataMap)
-		return timestampType, colType.Nullable, metadata, nil
+		return timestampType, nullable, metadata, nil
 
 	default:
 		// Fall back to default conversion for standard types

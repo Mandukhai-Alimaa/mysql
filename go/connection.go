@@ -102,6 +102,7 @@ func (c *mysqlConnectionImpl) GetTableSchema(ctx context.Context, catalog *strin
 		CharacterMaximumLength sql.NullInt64
 		NumericPrecision       sql.NullInt64
 		NumericScale           sql.NullInt64
+		DatetimePrecision      sql.NullInt64
 	}
 
 	query := `SELECT
@@ -112,7 +113,8 @@ func (c *mysqlConnectionImpl) GetTableSchema(ctx context.Context, catalog *strin
 		IS_NULLABLE,
 		CHARACTER_MAXIMUM_LENGTH,
 		NUMERIC_PRECISION,
-		NUMERIC_SCALE
+		NUMERIC_SCALE,
+		DATETIME_PRECISION
 	FROM INFORMATION_SCHEMA.COLUMNS
 	WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
 	ORDER BY ORDINAL_POSITION`
@@ -151,6 +153,7 @@ func (c *mysqlConnectionImpl) GetTableSchema(ctx context.Context, catalog *strin
 			&col.CharacterMaximumLength,
 			&col.NumericPrecision,
 			&col.NumericScale,
+			&col.DatetimePrecision,
 		)
 		if err != nil {
 			return nil, c.ErrorHelper.WrapIO(err, "failed to scan column information")
@@ -175,7 +178,9 @@ func (c *mysqlConnectionImpl) GetTableSchema(ctx context.Context, catalog *strin
 		if col.CharacterMaximumLength.Valid {
 			length = &col.CharacterMaximumLength.Int64
 		}
-		if col.NumericPrecision.Valid {
+		if col.DatetimePrecision.Valid {
+			precision = &col.DatetimePrecision.Int64
+		} else if col.NumericPrecision.Valid {
 			precision = &col.NumericPrecision.Int64
 		}
 		if col.NumericScale.Valid {
@@ -382,12 +387,12 @@ func (c *mysqlConnectionImpl) arrowToMySQLType(arrowType arrow.DataType, nullabl
 		mysqlType = "FLOAT"
 	case *arrow.Float64Type:
 		mysqlType = "DOUBLE"
-	case *arrow.StringType:
-		mysqlType = "TEXT"
-	case *arrow.BinaryType, *arrow.FixedSizeBinaryType, *arrow.BinaryViewType:
-		mysqlType = "BLOB"
-	case *arrow.LargeBinaryType:
+	case *arrow.StringType, *arrow.LargeStringType, *arrow.StringViewType:
+		mysqlType = "LONGTEXT"
+	case *arrow.BinaryType, *arrow.LargeBinaryType, *arrow.BinaryViewType:
 		mysqlType = "LONGBLOB"
+	case *arrow.FixedSizeBinaryType:
+		mysqlType = "BLOB"
 	case *arrow.Date32Type:
 		mysqlType = "DATE"
 	case *arrow.TimestampType:
