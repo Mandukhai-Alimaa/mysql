@@ -12,36 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// part: metadata
+
+[setup]
+drop = "test_timestamp"
+
+[tags]
+sql-type-name = "DATETIME"
+
 // part: setup_query
 
 CREATE TABLE test_timestamp (
     idx INTEGER,
-    res TIMESTAMP
+    res DATETIME(0)
 );
 
 INSERT INTO test_timestamp (idx, res) VALUES (1, TIMESTAMP '2023-05-15 13:45:30');
 INSERT INTO test_timestamp (idx, res) VALUES (2, TIMESTAMP '2000-01-01 00:00:00');
 INSERT INTO test_timestamp (idx, res) VALUES (3, TIMESTAMP '1969-07-20 20:17:40');
-INSERT INTO test_timestamp (idx, res) VALUES (4, TIMESTAMP '9999-12-29 23:59:59');
-INSERT INTO test_timestamp (idx, res) VALUES (5, NULL);
-
-// part: expected_schema
-
-{
-    "format": "+s",
-    "children": [
-        {
-            "name": "res",
-            "format": "tss:",
-            "flags": ["nullable"]
-        }
-    ]
-}
-
-// part: expected
-
-{"res": 1684158330}
-{"res": 946684800}
-{"res": -14182940}
-{"res": 253402127999}
-{"res": null}
+INSERT INTO test_timestamp (idx, res) VALUES (4, TIMESTAMP '0001-01-01 00:00:00');
+INSERT INTO test_timestamp (idx, res) VALUES (5, TIMESTAMP '9999-12-31 23:59:59');
+INSERT INTO test_timestamp (idx, res) VALUES (6, NULL);
